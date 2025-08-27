@@ -463,7 +463,30 @@ export default function CityMap({ cityData }: CityMapProps) {
 
   const getAllRestaurants = () => {
     if (!yelpResults?.results) return [];
-    return yelpResults.results.flatMap(result => result.uniqueBusinesses || []);
+    const allBusinesses = yelpResults.results.flatMap(result => result.uniqueBusinesses || []);
+    
+    // Deduplicate by business ID
+    const uniqueMap = new Map<string, Restaurant>();
+    allBusinesses.forEach(business => {
+      if (!uniqueMap.has(business.id)) {
+        uniqueMap.set(business.id, business);
+      }
+    });
+    
+    return Array.from(uniqueMap.values());
+  };
+
+  const getDeduplicationStats = () => {
+    if (!yelpResults?.results) return { total: 0, unique: 0, duplicates: 0 };
+    
+    const allBusinesses = yelpResults.results.flatMap(result => result.uniqueBusinesses || []);
+    const uniqueBusinesses = getAllRestaurants();
+    
+    return {
+      total: allBusinesses.length,
+      unique: uniqueBusinesses.length,
+      duplicates: allBusinesses.length - uniqueBusinesses.length
+    };
   };
 
 
@@ -885,6 +908,17 @@ export default function CityMap({ cityData }: CityMapProps) {
                         <div className="text-xs text-purple-600 mt-1">❌ Issues</div>
                       </div>
                     </div>
+                    
+                    {/* Deduplication Statistics */}
+                    {getDeduplicationStats().duplicates > 0 && (
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200 mb-4">
+                        <div className="text-sm text-green-800">
+                          <span className="font-medium">Deduplication:</span> Found {getDeduplicationStats().total} restaurants, 
+                          removed {getDeduplicationStats().duplicates} duplicates, 
+                          showing {getDeduplicationStats().unique} unique restaurants
+                        </div>
+                      </div>
+                    )}
                     
                                          {/* Progress Bar */}
                      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
