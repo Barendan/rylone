@@ -7,9 +7,11 @@ interface MapControlsProps {
   showBuffered: boolean;
   showH3Grid: boolean;
   showHexagonNumbers: boolean;
+  showRestaurants: boolean;
   onToggleBuffered: () => void;
   onToggleH3Grid: () => void;
   onToggleHexagonNumbers: () => void;
+  onToggleRestaurants: () => void;
 }
 
 export default function MapControls({
@@ -17,9 +19,11 @@ export default function MapControls({
   showBuffered,
   showH3Grid,
   showHexagonNumbers,
+  showRestaurants,
   onToggleBuffered,
   onToggleH3Grid,
-  onToggleHexagonNumbers
+  onToggleHexagonNumbers,
+  onToggleRestaurants
 }: MapControlsProps) {
   if (!cityData) return null;
 
@@ -60,6 +64,18 @@ export default function MapControls({
           />
           <span className="text-sm font-medium text-gray-700">
             Show Hexagon Numbers
+          </span>
+        </label>
+        
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showRestaurants}
+            onChange={onToggleRestaurants}
+            className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+          />
+          <span className="text-sm font-medium text-gray-700">
+            🍕 Show Restaurants
           </span>
         </label>
       </div>

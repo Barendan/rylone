@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { EnhancedCityResponse } from '@/lib/geo';
 
 // Dynamically import the map component to avoid SSR issues
-const CityMap = dynamic(() => import('../components/CityMap'), { ssr: false });
+const CityMap = dynamic(() => import('../components/CityMap/index'), { ssr: false });
 
 interface FormData {
   cityName: string;

@@ -9,8 +9,10 @@ interface Restaurant {
   id: string;
   name: string;
   rating: number;
+  review_count: number;
   price: string;
   categories: Array<{ alias: string; title: string }>;
+  coordinates: { latitude: number; longitude: number };
   location: {
     address1: string;
     city: string;

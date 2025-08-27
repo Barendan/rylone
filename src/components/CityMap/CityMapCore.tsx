@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
+import 'leaflet.markercluster';
 import { EnhancedCityResponse } from '@/lib/geo';
+import type { YelpBusiness } from '@/lib/yelpSearch';
 
 // Fix for default markers in Leaflet
 delete (L.Icon.Default.prototype as { _getIconUrl?: string })._getIconUrl;
@@ -17,6 +19,8 @@ interface CityMapCoreProps {
   showBuffered: boolean;
   showH3Grid: boolean;
   showHexagonNumbers: boolean;
+  showRestaurants?: boolean;
+  restaurants?: YelpBusiness[];
   onMapReady: (map: L.Map) => void;
 }
 
@@ -25,12 +29,15 @@ export default function CityMapCore({
   showBuffered, 
   showH3Grid, 
   showHexagonNumbers,
+  showRestaurants = false,
+  restaurants = [],
   onMapReady 
 }: CityMapCoreProps) {
   const mapRef = useRef<L.Map | null>(null);
   const cityLayerRef = useRef<L.GeoJSON | null>(null);
   const bufferedLayerRef = useRef<L.GeoJSON | null>(null);
   const h3GridLayerRef = useRef<L.LayerGroup | null>(null);
+  const restaurantLayerRef = useRef<L.MarkerClusterGroup | null>(null);
 
   // Initialize map with performance optimizations
   useEffect(() => {
@@ -250,6 +257,75 @@ export default function CityMapCore({
       });
     }
   }, [cityData, showBuffered, showH3Grid, showHexagonNumbers]);
+
+  // Restaurant layer management
+  useEffect(() => {
+    if (!mapRef.current || !showRestaurants || !restaurants || restaurants.length === 0) {
+      // Remove existing restaurant layer if conditions not met
+      if (restaurantLayerRef.current && mapRef.current) {
+        mapRef.current.removeLayer(restaurantLayerRef.current);
+        restaurantLayerRef.current.clearLayers();
+        restaurantLayerRef.current = null;
+      }
+      return;
+    }
+
+    const map = mapRef.current;
+    
+    // Remove existing layer
+    if (restaurantLayerRef.current) {
+      map.removeLayer(restaurantLayerRef.current);
+      restaurantLayerRef.current.clearLayers();
+    }
+
+    console.log(`🍕 Adding ${restaurants.length} restaurants to map`);
+
+    // Create cluster group with our styling
+    const clusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 50 // Reasonable clustering distance
+    });
+
+    // Add each restaurant as a marker
+    let validRestaurants = 0;
+    restaurants.forEach((restaurant) => {
+      const { latitude, longitude } = restaurant.coordinates;
+      
+      // Validate coordinates
+      if (!latitude || !longitude || 
+          latitude < -90 || latitude > 90 || 
+          longitude < -180 || longitude > 180 ||
+          isNaN(latitude) || isNaN(longitude)) {
+        console.warn(`❌ Invalid coordinates for ${restaurant.name}: [${latitude}, ${longitude}]`);
+        return;
+      }
+
+      try {
+        const marker = L.marker([latitude, longitude])
+          .bindPopup(`
+            <div style="min-width: 200px">
+              <strong>${restaurant.name}</strong><br>
+              <span style="color: #f59e0b">★</span> ${restaurant.rating} (${restaurant.review_count} reviews)<br>
+              ${restaurant.categories?.map(c => c.title).join(', ') || 'Restaurant'}<br>
+              <small>${restaurant.location?.address1 || ''}</small>
+            </div>
+          `);
+        
+        clusterGroup.addLayer(marker);
+        validRestaurants++;
+      } catch (error) {
+        console.warn(`❌ Error creating marker for ${restaurant.name}:`, error);
+      }
+    });
+
+    if (validRestaurants > 0) {
+      map.addLayer(clusterGroup);
+      restaurantLayerRef.current = clusterGroup;
+      console.log(`✅ Added ${validRestaurants} restaurant markers to map`);
+    } else {
+      console.warn(`⚠️ No valid restaurants to display`);
+    }
+
+  }, [showRestaurants, restaurants]);
 
   return null; // This component doesn't render anything visible
 }

@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import L from 'leaflet';
 import { EnhancedCityResponse } from '@/lib/geo';
+import type { YelpBusiness } from '@/lib/yelpSearch';
 import CityMapCore from './CityMapCore';
 import MapControls from './MapControls';
 import YelpIntegration from './YelpIntegration';
@@ -13,8 +14,10 @@ interface Restaurant {
   id: string;
   name: string;
   rating: number;
+  review_count: number;
   price: string;
   categories: Array<{ alias: string; title: string }>;
+  coordinates: { latitude: number; longitude: number };
   location: {
     address1: string;
     city: string;
@@ -64,6 +67,7 @@ export default function CityMap({ cityData }: CityMapProps) {
   const [showBuffered, setShowBuffered] = useState(true);
   const [showH3Grid, setShowH3Grid] = useState(true);
   const [showHexagonNumbers, setShowHexagonNumbers] = useState(true);
+  const [showRestaurants, setShowRestaurants] = useState(true);
 
   // Yelp testing state
   const [yelpResults, setYelpResults] = useState<YelpTestResult | null>(null);
@@ -86,6 +90,26 @@ export default function CityMap({ cityData }: CityMapProps) {
     setShowHexagonNumbers(!showHexagonNumbers);
   };
 
+  const toggleRestaurants = () => {
+    setShowRestaurants(!showRestaurants);
+  };
+
+  // Get all unique restaurants from Yelp results
+  const getAllRestaurants = (): YelpBusiness[] => {
+    if (!yelpResults?.results) return [];
+    const allBusinesses = yelpResults.results.flatMap(result => result.uniqueBusinesses || []);
+    
+    // Deduplicate by business ID (same logic as HexagonDisplay)
+    const uniqueMap = new Map<string, YelpBusiness>();
+    allBusinesses.forEach(business => {
+      if (!uniqueMap.has(business.id)) {
+        uniqueMap.set(business.id, business as YelpBusiness);
+      }
+    });
+    
+    return Array.from(uniqueMap.values());
+  };
+
   // Handle Yelp results update
   const handleYelpResultsUpdate = (results: YelpTestResult) => {
     setYelpResults(results);
@@ -99,9 +123,11 @@ export default function CityMap({ cityData }: CityMapProps) {
         showBuffered={showBuffered}
         showH3Grid={showH3Grid}
         showHexagonNumbers={showHexagonNumbers}
+        showRestaurants={showRestaurants}
         onToggleBuffered={toggleBuffered}
         onToggleH3Grid={toggleH3Grid}
         onToggleHexagonNumbers={toggleHexagonNumbers}
+        onToggleRestaurants={toggleRestaurants}
       />
       
       {/* Map Container */}
@@ -117,6 +143,8 @@ export default function CityMap({ cityData }: CityMapProps) {
         showBuffered={showBuffered}
         showH3Grid={showH3Grid}
         showHexagonNumbers={showHexagonNumbers}
+        showRestaurants={showRestaurants}
+        restaurants={getAllRestaurants()}
         onMapReady={handleMapReady}
       />
 
